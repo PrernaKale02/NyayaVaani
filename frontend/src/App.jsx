@@ -28,7 +28,124 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedSource, setSelectedSource] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadStage, setUploadStage] = useState("");
+  const [selectedText, setSelectedText] = useState("");
+  const [selectionPosition, setSelectionPosition] = useState(null);
+  const [explanation, setExplanation] = useState("");
+  const [explainLoading, setExplainLoading] = useState(false);
+  const [showExplainPopup, setShowExplainPopup] = useState(false);
+  const [translation, setTranslation] = useState("");
+  const [translationLanguage, setTranslationLanguage] = useState("Hindi");
+  const [translateLoading, setTranslateLoading] = useState(false);
 
+  useEffect(() => {
+  const handleSelection = () => {
+    const selection = window.getSelection();
+
+    if (!selection || selection.isCollapsed) {
+      setSelectionPosition(null);
+      return;
+    }
+
+    const text = selection.toString().trim();
+
+    if (!text || text.length > 1000) {
+      setSelectionPosition(null);
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    setSelectedText(text);
+
+    setSelectionPosition({
+      top: rect.top + window.scrollY - 45,
+      left: rect.left + window.scrollX + rect.width / 2
+    });
+  };
+
+  document.addEventListener("mouseup", handleSelection);
+
+  return () => {
+      document.removeEventListener("mouseup", handleSelection);
+    };
+  }, []);
+
+const handleExplain = async () => {
+  if (!selectedText) return;
+
+  setExplainLoading(true);
+  setShowExplainPopup(true);
+  setExplanation("");
+  setTranslation("");
+
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8090/explain",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          text: selectedText
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Explanation failed");
+    }
+
+    setExplanation(data.explanation);
+
+  } catch (error) {
+    console.error(error);
+    setExplanation("Could not explain this text.");
+  } finally {
+    setExplainLoading(false);
+  }
+  };
+
+  const handleTranslate = async () => {
+    if (!explanation) return;
+
+    setTranslateLoading(true);
+
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:8090/translate",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            text: explanation,
+            target_language: translationLanguage
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Translation failed");
+      }
+
+      setTranslation(data.translation);
+
+    } catch (error) {
+      console.error(error);
+      setTranslation("Could not translate this explanation.");
+    } finally {
+      setTranslateLoading(false);
+    }
+  };
   useEffect(() => {
     if (!selectedSource) return undefined;
 
@@ -40,6 +157,71 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedSource]);
 
+  const handleUpload = async (event) => {
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      alert("Please select a PDF file.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      setUploading(true);
+      setUploadStage("Uploading document...");
+
+      // Give the UI a moment to show the first stage
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      setUploadStage("Extracting text...");
+
+      await new Promise((resolve) => setTimeout(resolve, 700));
+
+      setUploadStage("Creating legal document chunks...");
+
+      await new Promise((resolve) => setTimeout(resolve, 700));
+
+      setUploadStage("Generating multilingual embeddings...");
+
+      const responsePromise = fetch("http://127.0.0.1:8090/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      // While backend is processing
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      setUploadStage("Indexing in vector database...");
+
+      const response = await responsePromise;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Upload failed");
+      }
+
+      setUploadStage("Document indexed successfully!");
+
+      setTimeout(() => {
+        setUploading(false);
+        setUploadStage("");
+      }, 1500);
+
+    } catch (error) {
+      console.error("Upload error:", error);
+
+      setUploadStage("");
+      setUploading(false);
+
+      alert(`Upload failed: ${error.message}`);
+    } finally {
+      event.target.value = "";
+    }
+  };
   const sendMessage = async () => {
     if (!message.trim() || loading) return;
 
@@ -256,10 +438,28 @@ function App() {
         </section>
 
         {/* Input */}
+        <input
+            id="document-upload"
+            type="file"
+            accept=".pdf"
+            onChange={handleUpload}
+            style={{ display: "none" }}
+          />
         <div className="composer-wrapper">
+        {uploading && (
+          <div className="upload-status">
+            <div className="upload-spinner"></div>
+            <span>{uploadStage}</span>
+          </div>
+        )}
           <div className="composer">
 
-            <button className="attach-button" title="Upload document">
+            <button
+              className="attach-button"
+              title={uploading ? "Uploading..." : "Upload document"}
+              onClick={() => document.getElementById("document-upload").click()}
+              disabled={uploading}
+            >
               <Paperclip size={19} />
             </button>
 
@@ -323,7 +523,90 @@ function App() {
             </section>
           </div>
         )}
+        {selectionPosition && !showExplainPopup && (
+          <button
+            className="explain-bubble"
+            style={{
+              top: selectionPosition.top,
+              left: selectionPosition.left
+            }}
+            onClick={handleExplain}
+          >
+            ✨ Explain
+          </button>
+        )}
+        {showExplainPopup && (
+          <div
+            className="explain-popup"
+            style={{
+              top: selectionPosition?.top + 45,
+              left: selectionPosition?.left
+            }}
+          >
+            <div className="explain-header">
+              <span>Legal Explanation</span>
 
+              <button
+                className="explain-close"
+                onClick={() => {
+                  setShowExplainPopup(false);
+                  setSelectionPosition(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="selected-term">
+              "{selectedText}"
+            </div>
+
+            <div className="explanation-content">
+              {explainLoading ? (
+                <div className="explain-loading">
+                  <div className="small-spinner"></div>
+                  Explaining...
+                </div>
+              ) : (
+                explanation
+              )}
+            </div>
+
+            {!explainLoading && explanation && (
+              <>
+                <div className="translate-row">
+                  <select
+                    value={translationLanguage}
+                    onChange={(e) =>
+                      setTranslationLanguage(e.target.value)
+                    }
+                  >
+                    <option>Hindi</option>
+                    <option>Marathi</option>
+                    <option>Malayalam</option>
+                    <option>English</option>
+                  </select>
+
+                  <button
+                    className="translate-button"
+                    onClick={handleTranslate}
+                    disabled={translateLoading}
+                  >
+                    {translateLoading
+                      ? "Translating..."
+                      : "Translate"}
+                  </button>
+                </div>
+
+                {translation && (
+                  <div className="translation-result">
+                    {translation}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );

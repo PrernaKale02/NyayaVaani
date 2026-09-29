@@ -675,3 +675,188 @@ button {
     padding-right: 17px;
   }
 }
+
+.upload-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #315443;
+  background: #f3f7f4;
+  border: 1px solid #dce8df;
+  border-radius: 10px;
+}
+
+.upload-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid #cbdacf;
+  border-top-color: #315443;
+  border-radius: 50%;
+  animation: upload-spin 0.8s linear infinite;
+}
+
+@keyframes upload-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.explain-bubble {
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 1000;
+
+  padding: 7px 12px;
+
+  border: 1px solid #d7e2da;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #315443;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+  cursor: pointer;
+}
+
+.explain-bubble:hover {
+  background: #f3f7f4;
+}
+
+.explain-popup {
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 1100;
+
+  width: 320px;
+
+  background: #ffffff;
+  border: 1px solid #dce5df;
+  border-radius: 12px;
+
+  padding: 14px;
+
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.16);
+}
+
+.explain-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  font-size: 13px;
+  font-weight: 700;
+  color: #263d31;
+
+  margin-bottom: 10px;
+}
+
+.explain-close {
+  border: none;
+  background: transparent;
+
+  font-size: 20px;
+  color: #7a857e;
+
+  cursor: pointer;
+}
+
+.selected-term {
+  padding: 8px 10px;
+
+  background: #f5f7f5;
+  border-radius: 7px;
+
+  font-size: 12px;
+  color: #526057;
+
+  margin-bottom: 10px;
+}
+
+.explanation-content {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #26352d;
+}
+
+.explain-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #68756d;
+}
+
+.small-spinner {
+  width: 13px;
+  height: 13px;
+
+  border: 2px solid #d6e0d9;
+  border-top-color: #315443;
+
+  border-radius: 50%;
+
+  animation: explain-spin 0.8s linear infinite;
+}
+
+@keyframes explain-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.translate-row {
+  display: flex;
+  gap: 8px;
+
+  margin-top: 14px;
+}
+
+.translate-row select {
+  flex: 1;
+
+  padding: 7px 8px;
+
+  border: 1px solid #d6dfd8;
+  border-radius: 7px;
+
+  background: #ffffff;
+  font-size: 12px;
+}
+
+.translate-button {
+  padding: 7px 11px;
+
+  border: none;
+  border-radius: 7px;
+
+  background: #315443;
+  color: white;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.translate-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.translation-result {
+  margin-top: 10px;
+  padding: 9px 10px;
+
+  background: #f3f7f4;
+  border-radius: 7px;
+
+  font-size: 13px;
+  line-height: 1.5;
+  color: #26352d;
+}

@@ -8,10 +8,10 @@ model = SentenceTransformer(MODEL_NAME)
 def generate_embeddings(texts: list[str]):
     embeddings = model.encode(
         texts,
+        batch_size=8,
         normalize_embeddings=True,
-        show_progress_bar=False
+        show_progress_bar=True
     )
-
     return embeddings.tolist()
 
 

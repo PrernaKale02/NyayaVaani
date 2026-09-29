@@ -1,8 +1,14 @@
 from uuid import uuid5, NAMESPACE_DNS
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
-
+from qdrant_client.models import (
+    Distance,
+    VectorParams,
+    PointStruct,
+    Filter,
+    FieldCondition,
+    MatchValue
+)
 
 COLLECTION_NAME = "nyayavaani_documents"
 
@@ -69,7 +75,7 @@ def add_documents(
 
 def search_documents(
     query_embedding: list[float],
-    limit: int = 5
+    limit: int = 10
 ):
     results = client.query_points(
         collection_name=COLLECTION_NAME,
@@ -78,3 +84,29 @@ def search_documents(
     )
 
     return results.points
+
+def get_document_version(document_name: str) -> int:
+    results = client.scroll(
+        collection_name=COLLECTION_NAME,
+        scroll_filter=Filter(
+            must=[
+                FieldCondition(
+                    key="document_id",
+                    match=MatchValue(value=document_name)
+                )
+            ]
+        ),
+        limit=1,
+        with_payload=True,
+        with_vectors=False
+    )
+
+    points = results[0]
+
+    if not points:
+        return 0
+
+    return max(
+        point.payload.get("version", 1)
+        for point in points
+    )

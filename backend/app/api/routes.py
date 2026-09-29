@@ -5,7 +5,21 @@ from app.services.pdf_service import extract_pages_from_pdf, chunk_text
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
-from app.models.schemas import AskRequest, AskResponse
+from app.models.schemas import (
+    AskRequest,
+    AskResponse,
+    ExplainRequest,
+    ExplainResponse,
+    TranslateRequest,
+    TranslateResponse
+)
+from app.services.groq_service import (
+    explain_text,
+    translate_text
+)
+
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 from app.services.pdf_service import (
     extract_text_from_pdf,
@@ -20,7 +34,8 @@ from app.services.embedding_service import (
 from app.services.vector_service import (
     initialize_collection,
     add_documents,
-    search_documents
+    search_documents,
+    get_document_version
 )
 
 from app.services.llm_service import generate_answer
@@ -62,7 +77,8 @@ async def upload_document(
 
     initialize_collection(len(embeddings[0]))
 
-    version = 1
+    current_version = get_document_version(file.filename)
+    version = current_version + 1
 
     add_documents(
         embeddings,
@@ -119,3 +135,48 @@ async def ask_question(request: AskRequest):
         answer=answer,
         sources=sources
     )
+
+@router.post("/explain", response_model=ExplainResponse)
+async def explain_selected_text(request: ExplainRequest):
+
+    text = request.text.strip()
+
+    if not text:
+        raise HTTPException(
+            status_code=400,
+            detail="No text selected."
+        )
+
+    if len(text) > 1000:
+        raise HTTPException(
+            status_code=400,
+            detail="Please select a shorter piece of text."
+        )
+
+    explanation = explain_text(text)
+
+    return {
+        "text": text,
+        "explanation": explanation
+    }
+
+
+@router.post("/translate", response_model=TranslateResponse)
+async def translate_selected_text(request: TranslateRequest):
+
+    text = request.text.strip()
+
+    if not text:
+        raise HTTPException(
+            status_code=400,
+            detail="No text provided."
+        )
+
+    translation = translate_text(
+        text,
+        request.target_language
+    )
+
+    return {
+        "translation": translation
+    }
