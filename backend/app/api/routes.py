@@ -1,6 +1,8 @@
 from pathlib import Path
 import shutil
 
+from app.services.pdf_service import extract_pages_from_pdf, chunk_text
+
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
 from app.models.schemas import AskRequest, AskResponse
@@ -34,7 +36,6 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 async def upload_document(
     file: UploadFile = File(...)
 ):
-
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=400,
@@ -46,34 +47,37 @@ async def upload_document(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    text = extract_text_from_pdf(
-        str(file_path)
-    )
+    pages = extract_pages_from_pdf(str(file_path))
 
-    if not text.strip():
+    if not pages:
         raise HTTPException(
             status_code=400,
             detail="Could not extract text from PDF."
         )
 
-    chunks = chunk_text(text)
+    chunks = chunk_text(pages)
+    texts = [chunk["text"] for chunk in chunks]
 
-    embeddings = generate_embeddings(chunks)
+    embeddings = generate_embeddings(texts)
 
-    initialize_collection(
-        vector_size=len(embeddings[0])
-    )
+    initialize_collection(len(embeddings[0]))
+
+    version = 1
 
     add_documents(
         embeddings,
         chunks,
-        file.filename
+        file.filename,
+        version
     )
 
     return {
         "message": "Document indexed successfully",
         "document": file.filename,
-        "chunks": len(chunks)
+        "version": version,
+        "pages": len(pages),
+        "chunks_added": len(chunks),
+        "incremental": True
     }
 
 
@@ -98,6 +102,8 @@ async def ask_question(request: AskRequest):
         sources.append({
             "id": i,
             "document": result.payload["document"],
+            "page": result.payload.get("page"),
+            "section": result.payload.get("section"),
             "chunk": result.payload["chunk_index"],
             "score": float(result.score) if result.score is not None else 0.0,
             "text": result.payload["text"],

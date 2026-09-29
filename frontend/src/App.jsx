@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import "./index.css";
 import ReactMarkdown from "react-markdown";
+import translations from "./i18n";
 
 const languages = [
   { code: "English", label: "English" },
@@ -22,6 +23,7 @@ const languages = [
 
 function App() {
   const [language, setLanguage] = useState("English");
+  const t = translations[language];
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);

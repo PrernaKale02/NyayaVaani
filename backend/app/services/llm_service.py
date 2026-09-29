@@ -25,15 +25,14 @@ def generate_answer(
         document = chunk.payload["document"]
         chunk_index = chunk.payload["chunk_index"]
 
-        context_parts.append(
-            f"""
-SOURCE [{i}]
-Document: {document}
-Chunk: {chunk_index}
-
-{text}
-"""
-        )
+        context_parts.append(f"""
+            SOURCE [{i}]
+            Document: {document}
+            Page: {chunk.payload.get("page")}
+            Section: {chunk.payload.get("section")}
+            Chunk: {chunk.payload.get("chunk_index")}
+            {text}
+            """)
 
     context = "\n".join(context_parts)
 
@@ -53,19 +52,24 @@ LEGAL CONTEXT:
 {context}
 
 INSTRUCTIONS:
-1. Use only information supported by the provided context.
+1. Use only information supported by the provided legal context.
 2. Do not invent legal provisions, sections, cases, or facts.
 3. If the context does not contain enough information, clearly say so.
-4. Explain legal language in simple terms.
-5. Cite supporting sources using [1], [2], etc.
-6. Use citations inline immediately after the claim they support.
-7. Do not create a separate Sources or Source Reference section.
-8. Do not repeat the source text unnecessarily.
-9. Do not present yourself as a lawyer.
-10. Do not give a definitive legal opinion.
-11. Clearly distinguish the source text from your explanation.
+4. Explain legal terminology in simple language.
+5. Write the entire answer in the requested response language.
+6. Do not switch to English unless a legal term has no clear natural equivalent.
+7. Preserve important legal terms in their original English form in parentheses when useful.
+8. Cite supporting sources using [1], [2], etc.
+9. Place citations immediately after the claim they support.
+10. Do not create a separate Sources or Source Reference section.
+11. Do not repeat the retrieved source text unnecessarily.
+12. Do not present yourself as a lawyer.
+13. Do not give a definitive legal opinion.
+14. Clearly distinguish explanation from the source material.
 
-Return a concise, well-structured answer using Markdown.
+The requested response language is: {language}
+
+Return a concise, well-structured Markdown answer.
 """
 
     response = client.models.generate_content(

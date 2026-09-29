@@ -1,41 +1,83 @@
+import re
 import pymupdf
 
 
-def extract_text_from_pdf(file_path: str) -> str:
+def extract_pages_from_pdf(file_path: str) -> list[dict]:
     document = pymupdf.open(file_path)
 
     pages = []
 
-    for page in document:
-        text = page.get_text("text")
+    for page_number, page in enumerate(document, start=1):
+        text = page.get_text("text").strip()
 
-        if text.strip():
-            pages.append(text)
+        if text:
+            pages.append({
+                "page": page_number,
+                "text": text
+            })
 
     document.close()
+    return pages
 
-    return "\n".join(pages)
+
+def extract_text_from_pdf(file_path: str) -> str:
+    pages = extract_pages_from_pdf(file_path)
+    return "\n".join(page["text"] for page in pages)
+
+
+def detect_section(text: str) -> str | None:
+    patterns = [
+        r"\bSection\s+\d+[A-Za-z]?",
+        r"\bSECTION\s+\d+[A-Za-z]?",
+        r"\bArticle\s+\d+[A-Za-z]?",
+        r"\bARTICLE\s+\d+[A-Za-z]?"
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            return match.group(0)
+
+    return None
 
 
 def chunk_text(
-    text: str,
+    pages: list[dict],
     chunk_size: int = 800,
     chunk_overlap: int = 150
-) -> list[str]:
-
-    words = text.split()
+) -> list[dict]:
 
     chunks = []
-    start = 0
+    chunk_index = 0
 
-    while start < len(words):
-        end = start + chunk_size
+    for page in pages:
+        words = page["text"].split()
+        page_number = page["page"]
 
-        chunk = " ".join(words[start:end])
+        start = 0
+        current_section = None
 
-        if chunk.strip():
-            chunks.append(chunk)
+        while start < len(words):
+            end = min(start + chunk_size, len(words))
+            chunk = " ".join(words[start:end]).strip()
 
-        start += chunk_size - chunk_overlap
+            if not chunk:
+                start += chunk_size - chunk_overlap
+                continue
+
+            detected_section = detect_section(chunk)
+
+            if detected_section:
+                current_section = detected_section
+
+            chunks.append({
+                "text": chunk,
+                "page": page_number,
+                "section": current_section,
+                "chunk_index": chunk_index
+            })
+
+            chunk_index += 1
+            start += chunk_size - chunk_overlap
 
     return chunks

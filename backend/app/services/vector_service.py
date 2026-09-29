@@ -1,11 +1,7 @@
 from uuid import uuid5, NAMESPACE_DNS
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import (
-    Distance,
-    VectorParams,
-    PointStruct
-)
+from qdrant_client.models import Distance, VectorParams, PointStruct
 
 
 COLLECTION_NAME = "nyayavaani_documents"
@@ -14,7 +10,6 @@ client = QdrantClient(path="./qdrant_data")
 
 
 def initialize_collection(vector_size: int):
-
     collections = client.get_collections().collections
 
     exists = any(
@@ -34,20 +29,19 @@ def initialize_collection(vector_size: int):
 
 def add_documents(
     embeddings: list[list[float]],
-    chunks: list[str],
-    document_name: str
+    chunks: list[dict],
+    document_name: str,
+    version: int = 1
 ):
-
     points = []
 
-    for index, (embedding, chunk) in enumerate(
-        zip(embeddings, chunks)
-    ):
+    for embedding, chunk in zip(embeddings, chunks):
+        chunk_index = chunk["chunk_index"]
 
         point_id = str(
             uuid5(
                 NAMESPACE_DNS,
-                f"{document_name}-{index}"
+                f"{document_name}-v{version}-{chunk_index}"
             )
         )
 
@@ -56,9 +50,13 @@ def add_documents(
                 id=point_id,
                 vector=embedding,
                 payload={
-                    "text": chunk,
+                    "text": chunk["text"],
                     "document": document_name,
-                    "chunk_index": index
+                    "document_id": document_name,
+                    "version": version,
+                    "page": chunk["page"],
+                    "section": chunk["section"],
+                    "chunk_index": chunk_index
                 }
             )
         )
@@ -73,7 +71,6 @@ def search_documents(
     query_embedding: list[float],
     limit: int = 5
 ):
-
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=query_embedding,

@@ -9,6 +9,8 @@ class AskRequest(BaseModel):
 class Source(BaseModel):
     id: int
     document: str
+    page: int | None = None
+    section: str | None = None
     chunk: int
     score: float
     text: str
