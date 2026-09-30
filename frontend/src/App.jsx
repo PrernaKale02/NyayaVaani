@@ -39,6 +39,20 @@ function App() {
   const [translationLanguage, setTranslationLanguage] = useState("Hindi");
   const [translateLoading, setTranslateLoading] = useState(false);
 
+  const [sessionId] = useState(() => {
+    let id = sessionStorage.getItem("nyayavaani_session_id");
+
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem(
+        "nyayavaani_session_id",
+        id
+      );
+    }
+
+    return id;
+  });
+
   useEffect(() => {
   const handleSelection = () => {
     const selection = window.getSelection();
@@ -169,6 +183,7 @@ const handleExplain = async () => {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("session_id", sessionId);
 
     try {
       setUploading(true);
@@ -247,6 +262,7 @@ const handleExplain = async () => {
         body: JSON.stringify({
           question,
           language,
+          session_id: sessionId
         }),
       });
 

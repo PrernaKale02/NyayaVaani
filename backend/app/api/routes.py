@@ -1,5 +1,6 @@
 from pathlib import Path
 import shutil
+from fastapi import Form
 
 from app.services.pdf_service import extract_pages_from_pdf, chunk_text
 
@@ -49,7 +50,8 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/upload")
 async def upload_document(
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    session_id: str = Form(...)
 ):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -77,12 +79,17 @@ async def upload_document(
 
     initialize_collection(len(embeddings[0]))
 
-    current_version = get_document_version(file.filename)
+    current_version = get_document_version(
+        file.filename,
+        session_id
+    )
+
     version = current_version + 1
 
     add_documents(
         embeddings,
         chunks,
+        session_id,
         file.filename,
         version
     )
@@ -93,6 +100,7 @@ async def upload_document(
         "version": version,
         "pages": len(pages),
         "chunks_added": len(chunks),
+        "session_id": session_id,
         "incremental": True
     }
 
@@ -103,7 +111,8 @@ async def ask_question(request: AskRequest):
 
     results = search_documents(
         query_embedding,
-        limit=5
+        session_id=request.session_id,
+        limit=10
     )
 
     if not results:

@@ -37,6 +37,7 @@ def add_documents(
     embeddings: list[list[float]],
     chunks: list[dict],
     document_name: str,
+    session_id: str,
     version: int = 1
 ):
     points = []
@@ -47,7 +48,7 @@ def add_documents(
         point_id = str(
             uuid5(
                 NAMESPACE_DNS,
-                f"{document_name}-v{version}-{chunk_index}"
+                f"{session_id}-{document_name}-v{version}-{chunk_index}"
             )
         )
 
@@ -59,6 +60,7 @@ def add_documents(
                     "text": chunk["text"],
                     "document": document_name,
                     "document_id": document_name,
+                    "session_id": session_id,
                     "version": version,
                     "page": chunk["page"],
                     "section": chunk["section"],
@@ -75,17 +77,30 @@ def add_documents(
 
 def search_documents(
     query_embedding: list[float],
+    session_id: str,
     limit: int = 10
 ):
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=query_embedding,
+        query_filter=Filter(
+            must=[
+                FieldCondition(
+                    key="session_id",
+                    match=MatchValue(value=session_id)
+                )
+            ]
+        ),
         limit=limit
     )
 
     return results.points
 
-def get_document_version(document_name: str) -> int:
+def get_document_version(
+    document_name: str,
+    session_id: str
+) -> int:
+
     results = client.scroll(
         collection_name=COLLECTION_NAME,
         scroll_filter=Filter(
@@ -93,10 +108,14 @@ def get_document_version(document_name: str) -> int:
                 FieldCondition(
                     key="document_id",
                     match=MatchValue(value=document_name)
+                ),
+                FieldCondition(
+                    key="session_id",
+                    match=MatchValue(value=session_id)
                 )
             ]
         ),
-        limit=1,
+        limit=100,
         with_payload=True,
         with_vectors=False
     )
