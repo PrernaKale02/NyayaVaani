@@ -6,6 +6,8 @@ from app.services.pdf_service import extract_pages_from_pdf, chunk_text
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
+from app.services.translation_service import translate_from_english
+
 from app.models.schemas import (
     AskRequest,
     AskResponse,
@@ -89,8 +91,8 @@ async def upload_document(
     add_documents(
         embeddings,
         chunks,
-        session_id,
         file.filename,
+        session_id,
         version
     )
 
@@ -181,7 +183,7 @@ async def translate_selected_text(request: TranslateRequest):
             detail="No text provided."
         )
 
-    translation = translate_text(
+    translation = translate_from_english(
         text,
         request.target_language
     )
