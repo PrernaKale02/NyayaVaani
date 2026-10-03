@@ -6,8 +6,10 @@ from app.services.pdf_service import extract_pages_from_pdf, chunk_text
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
-from app.services.translation_service import translate_from_english
-
+from app.services.translation_service import (
+    translate_from_english,
+    translate_to_english
+)
 from app.models.schemas import (
     AskRequest,
     AskResponse,
@@ -109,7 +111,13 @@ async def upload_document(
 
 @router.post("/ask", response_model=AskResponse)
 async def ask_question(request: AskRequest):
-    query_embedding = generate_query_embedding(request.question)
+
+    search_question = translate_to_english(
+        request.question,
+        request.language
+    )
+
+    query_embedding = generate_query_embedding(search_question)
 
     results = search_documents(
         query_embedding,
@@ -137,7 +145,7 @@ async def ask_question(request: AskRequest):
         })
 
     answer = generate_answer(
-        question=request.question,
+        question=search_question,
         retrieved_chunks=results,
         language=request.language
     )
