@@ -1,25 +1,12 @@
 import { useEffect, useState } from "react";
-import {
-  Scale,
-  Plus,
-  MessageSquare,
-  FileText,
-  Settings,
-  Globe,
-  Paperclip,
-  ArrowUp,
-  X,
-} from "lucide-react";
 import "./index.css";
-import ReactMarkdown from "react-markdown";
 import translations from "./i18n";
-
-const languages = [
-  { code: "English", label: "English" },
-  { code: "Hindi", label: "हिंदी" },
-  { code: "Marathi", label: "मराठी" },
-  { code: "Malayalam", label: "മലയാളം" },
-];
+import Sidebar from "./components/Sidebar";
+import Topbar from "./components/Topbar";
+import ChatArea from "./components/ChatArea";
+import Composer from "./components/Composer";
+import SourceModal from "./components/SourceModal";
+import ExplainPopup from "./components/ExplainPopup";
 
 function App() {
   const [language, setLanguage] = useState("English");
@@ -290,339 +277,44 @@ const handleExplain = async () => {
   };
   return (
     <div className="app">
-
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-icon">
-            <Scale size={20} strokeWidth={1.8} />
-          </div>
-          <div>
-            <h1>NyayaVaani</h1>
-            <span>Legal information, simply explained.</span>
-          </div>
-        </div>
-
-        <button className="new-chat" onClick={() => setMessages([])}>
-          <Plus size={17} />
-          New conversation
-        </button>
-
-        <div className="sidebar-section">
-          <p className="section-label">Workspace</p>
-
-          <button className="sidebar-item active">
-            <MessageSquare size={17} />
-            Conversations
-          </button>
-
-          <button className="sidebar-item">
-            <FileText size={17} />
-            My documents
-          </button>
-        </div>
-
-        <div className="sidebar-bottom">
-          <button className="sidebar-item">
-            <Settings size={17} />
-            Settings
-          </button>
-        </div>
-      </aside>
-
-      {/* Main */}
+      <Sidebar onNewChat={() => setMessages([])} />
       <main className="main">
-
-        <header className="topbar">
-          <div>
-            <span className="topbar-title">New conversation</span>
-          </div>
-
-          <div className="language-select">
-            <Globe size={16} />
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-            >
-              {languages.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </header>
-
-        <section className="chat-area">
-
-          {messages.length === 0 ? (
-            <>
-              <div className="welcome">
-                <div className="welcome-mark">
-                  <Scale size={25} strokeWidth={1.7} />
-                </div>
-
-                <p className="eyebrow">NYAYAVAANI</p>
-
-                <h2>
-                  Understand the law.
-                  <br />
-                  <span>In your language.</span>
-                </h2>
-
-                <p className="welcome-text">
-                  Ask questions about Indian law or upload a legal document.
-                  NyayaVaani finds relevant information and explains it clearly.
-                </p>
-              </div>
-
-              <div className="suggestions">
-                <button onClick={() => setMessage("What is public law?")}>
-                  What is public law?
-                </button>
-
-                <button onClick={() => setMessage("Explain this legal document")}>
-                  Explain a legal document
-                </button>
-
-                <button onClick={() => setMessage("Explain this clause simply")}>
-                  Explain a clause simply
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="messages">
-              {messages.map((msg, index) => (
-                <div key={index} className={`message-row ${msg.role}`}>
-                  {msg.role === "assistant" && (
-                    <div className="message-icon" aria-hidden="true">
-                      <Scale size={15} />
-                    </div>
-                  )}
-
-                  <div className="message-content">
-                    <div className="message-bubble">
-                      {msg.role === "assistant" ? (
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      ) : (
-                        msg.content
-                      )}
-                    </div>
-
-                    {msg.role === "assistant" && msg.sources?.length > 0 && (
-                      <div className="sources">
-                        <div className="sources-header">
-                          <FileText size={14} aria-hidden="true" />
-                          <span>Sources</span>
-                        </div>
-
-                        <div className="source-list">
-                          {msg.sources.map((source) => (
-                            <button
-                              className="source-card"
-                              key={source.id}
-                              onClick={() => setSelectedSource(source)}
-                              aria-label={`Open source ${source.id}: ${source.document}`}
-                            >
-                              <span className="source-number">[{source.id}]</span>
-                              <span className="source-name">{source.document}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {loading && (
-                <div className="message-row assistant">
-                  <div className="message-icon">
-                    <Scale size={15} />
-                  </div>
-
-                  <div className="message-content">
-                    <div className="message-bubble loading">
-                    Thinking...
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-        </section>
-
-        {/* Input */}
-        <input
-            id="document-upload"
-            type="file"
-            accept=".pdf"
-            onChange={handleUpload}
-            style={{ display: "none" }}
-          />
-        <div className="composer-wrapper">
-        {uploading && (
-          <div className="upload-status">
-            <div className="upload-spinner"></div>
-            <span>{uploadStage}</span>
-          </div>
-        )}
-          <div className="composer">
-
-            <button
-              className="attach-button"
-              title={uploading ? "Uploading..." : "Upload document"}
-              onClick={() => document.getElementById("document-upload").click()}
-              disabled={uploading}
-            >
-              <Paperclip size={19} />
-            </button>
-
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              placeholder="Ask a question about the law..."
-              rows={1}
-            />
-
-            <button
-              className="send-button"
-              onClick={sendMessage}
-              disabled={!message.trim()}
-            >
-              <ArrowUp size={18} />
-            </button>
-
-          </div>
-
-          <p className="disclaimer">
-            NyayaVaani provides legal information, not legal advice.
-          </p>
-        </div>
-
-        {selectedSource && (
-          <div
-            className="source-modal-backdrop"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setSelectedSource(null);
-            }}
-          >
-            <section
-              className="source-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="source-modal-title"
-            >
-              <header className="source-modal-header">
-                <div>
-                  <p className="source-modal-kicker">Source {selectedSource.id}</p>
-                  <h2 id="source-modal-title">{selectedSource.document}</h2>
-                </div>
-                <button
-                  className="source-modal-close"
-                  onClick={() => setSelectedSource(null)}
-                  aria-label="Close source"
-                >
-                  <X size={18} />
-                </button>
-              </header>
-              <div className="source-modal-text">
-                {selectedSource.text || "No source text is available."}
-              </div>
-            </section>
-          </div>
-        )}
-        {selectionPosition && !showExplainPopup && (
-          <button
-            className="explain-bubble"
-            style={{
-              top: selectionPosition.top,
-              left: selectionPosition.left
-            }}
-            onClick={handleExplain}
-          >
-            ✨ Explain
-          </button>
-        )}
-        {showExplainPopup && (
-          <div
-            className="explain-popup"
-            style={{
-              top: selectionPosition?.top + 45,
-              left: selectionPosition?.left
-            }}
-          >
-            <div className="explain-header">
-              <span>Legal Explanation</span>
-
-              <button
-                className="explain-close"
-                onClick={() => {
-                  setShowExplainPopup(false);
-                  setSelectionPosition(null);
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="selected-term">
-              "{selectedText}"
-            </div>
-
-            <div className="explanation-content">
-              {explainLoading ? (
-                <div className="explain-loading">
-                  <div className="small-spinner"></div>
-                  Explaining...
-                </div>
-              ) : (
-                explanation
-              )}
-            </div>
-
-            {!explainLoading && explanation && (
-              <>
-                <div className="translate-row">
-                  <select
-                    value={translationLanguage}
-                    onChange={(e) =>
-                      setTranslationLanguage(e.target.value)
-                    }
-                  >
-                    <option>Hindi</option>
-                    <option>Marathi</option>
-                    <option>Malayalam</option>
-                    <option>English</option>
-                  </select>
-
-                  <button
-                    className="translate-button"
-                    onClick={handleTranslate}
-                    disabled={translateLoading}
-                  >
-                    {translateLoading
-                      ? "Translating..."
-                      : "Translate"}
-                  </button>
-                </div>
-
-                {translation && (
-                  <div className="translation-result">
-                    {translation}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
+        <Topbar language={language} onLanguageChange={setLanguage} />
+        <ChatArea
+          messages={messages}
+          loading={loading}
+          onSuggestionSelect={setMessage}
+          onSourceSelect={setSelectedSource}
+        />
+        <Composer
+          message={message}
+          onMessageChange={setMessage}
+          onSend={sendMessage}
+          onUpload={handleUpload}
+          uploading={uploading}
+          uploadStage={uploadStage}
+        />
+        <SourceModal
+          source={selectedSource}
+          onClose={() => setSelectedSource(null)}
+        />
+        <ExplainPopup
+          selectionPosition={selectionPosition}
+          showExplainPopup={showExplainPopup}
+          selectedText={selectedText}
+          explanation={explanation}
+          explainLoading={explainLoading}
+          translation={translation}
+          translationLanguage={translationLanguage}
+          translateLoading={translateLoading}
+          onExplain={handleExplain}
+          onTranslate={handleTranslate}
+          onTranslationLanguageChange={setTranslationLanguage}
+          onClose={() => {
+            setShowExplainPopup(false);
+            setSelectionPosition(null);
+          }}
+        />
       </main>
     </div>
   );

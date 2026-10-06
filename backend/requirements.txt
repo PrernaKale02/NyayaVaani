@@ -7,3 +7,4 @@ sentence-transformers
 qdrant-client
 google-genai
 pydantic
+firebase-admin
