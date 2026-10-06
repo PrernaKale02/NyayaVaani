@@ -6,7 +6,7 @@ import {
   Settings,
 } from "lucide-react";
 
-function Sidebar({ onNewChat }) {
+function Sidebar({ onNewChat, user, onLogout }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -43,6 +43,24 @@ function Sidebar({ onNewChat }) {
           <Settings size={17} />
           Settings
         </button>
+
+        <div className="sidebar-user">
+          <div className="sidebar-user-info">
+            <div className="sidebar-user-name">
+              {user?.email}
+            </div>
+            <div className="sidebar-user-label">
+              Signed in
+            </div>
+          </div>
+
+          <button
+            className="logout-button"
+            onClick={onLogout}
+          >
+            Log out
+          </button>
+        </div>
       </div>
     </aside>
   );

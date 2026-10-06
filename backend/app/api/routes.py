@@ -6,6 +6,12 @@ from app.services.pdf_service import extract_pages_from_pdf, chunk_text
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from app.services.firebase_service import verify_token
+from app.services.reranker_service import rerank_documents
+
 from app.services.translation_service import (
     translate_from_english,
     translate_to_english
@@ -48,6 +54,20 @@ from app.services.llm_service import generate_answer
 
 router = APIRouter()
 
+security = HTTPBearer()
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    try:
+        return verify_token(credentials.credentials)
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired authentication token."
+        )
+
 UPLOAD_DIR = Path("data/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -55,8 +75,10 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 @router.post("/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    session_id: str = Form(...)
+    session_id: str = Form(...),
+    current_user: dict = Depends(get_current_user)
 ):
+    user_id = current_user["uid"]
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=400,
@@ -85,7 +107,7 @@ async def upload_document(
 
     current_version = get_document_version(
         file.filename,
-        session_id
+        user_id
     )
 
     version = current_version + 1
@@ -94,7 +116,7 @@ async def upload_document(
         embeddings,
         chunks,
         file.filename,
-        session_id,
+        user_id,
         version
     )
 
@@ -110,7 +132,11 @@ async def upload_document(
 
 
 @router.post("/ask", response_model=AskResponse)
-async def ask_question(request: AskRequest):
+async def ask_question(
+    request: AskRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    user_id = current_user["uid"]
 
     search_question = translate_to_english(
         request.question,
@@ -121,8 +147,13 @@ async def ask_question(request: AskRequest):
 
     results = search_documents(
         query_embedding,
-        session_id=request.session_id,
+        session_id=user_id,
         limit=10
+    )
+    results = rerank_documents(
+        search_question,
+        results,
+        top_k=5
     )
 
     if not results:

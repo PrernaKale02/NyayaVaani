@@ -7,6 +7,10 @@ import ChatArea from "./components/ChatArea";
 import Composer from "./components/Composer";
 import SourceModal from "./components/SourceModal";
 import ExplainPopup from "./components/ExplainPopup";
+import { auth } from "./firebase";
+import { onAuthStateChanged, signOut  } from "firebase/auth";
+import Login from "./auth/Login";
+import Signup from "./auth/Signup";
 
 function App() {
   const [language, setLanguage] = useState("English");
@@ -25,6 +29,26 @@ function App() {
   const [translation, setTranslation] = useState("");
   const [translationLanguage, setTranslationLanguage] = useState("Hindi");
   const [translateLoading, setTranslateLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showSignup, setShowSignup] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
 
   const [sessionId] = useState(() => {
     let id = sessionStorage.getItem("nyayavaani_session_id");
@@ -189,8 +213,13 @@ const handleExplain = async () => {
 
       setUploadStage("Generating multilingual embeddings...");
 
+      const token = await auth.currentUser.getIdToken();
+
       const responsePromise = fetch("http://127.0.0.1:8090/upload", {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
         body: formData,
       });
 
@@ -241,10 +270,12 @@ const handleExplain = async () => {
     setLoading(true);
 
     try {
+      const token = await auth.currentUser.getIdToken();
       const response = await fetch("http://127.0.0.1:8090/ask", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
           question,
@@ -275,9 +306,37 @@ const handleExplain = async () => {
       setLoading(false);
     }
   };
+  if (authLoading) {
+  return (
+    <div className="auth-page">
+      <div className="auth-card auth-loading">
+        <h1>NyayaVaani</h1>
+        <p>Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+  if (!user) {
+    return showSignup ? (
+      <Signup
+        onLogin={() => setShowSignup(false)}
+        onSignup={() => setShowSignup(false)}
+      />
+    ) : (
+      <Login
+        onSignup={() => setShowSignup(true)}
+        onLogin={() => {}}
+      />
+    );
+  }
   return (
     <div className="app">
-      <Sidebar onNewChat={() => setMessages([])} />
+      <Sidebar
+        onNewChat={() => setMessages([])}
+        user={user}
+        onLogout={handleLogout}
+      />
       <main className="main">
         <Topbar language={language} onLanguageChange={setLanguage} />
         <ChatArea
