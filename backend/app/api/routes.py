@@ -155,6 +155,13 @@ async def ask_question(
         results,
         top_k=5
     )
+    print("\nRERANKED RESULTS:")
+    for i, result in enumerate(results, start=1):
+        print(
+            f"{i}. page={result.payload.get('page')} "
+            f"section={result.payload.get('section')} "
+            f"text={result.payload.get('text', '')[:120]}"
+        )
 
     if not results:
         return AskResponse(
